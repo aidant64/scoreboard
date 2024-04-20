@@ -12,7 +12,7 @@ import attack_configs
 
 class AttackCoordinator(object):
     """
-    The coordinator of the attacks. Resposnible for update database
+    The coordinator of the attacks. Responsible for update database
     based on how the attacks return
     """
     def __init__(self, sql_lite_db, attack_interval=300, starting_delay=1):

