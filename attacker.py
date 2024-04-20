@@ -136,9 +136,9 @@ class AttackCoordinator(object):
     def join_attack_threads(self, thread_map, timout=1):
         misbehaving_threads = {}
 
-        for id, t in thread_map.iteritems():
+        for id, t in thread_map.items():
             t.join(1)
-            if t.isAlive():
+            if t.is_alive():
                 misbehaving_threads[id] = t
 
         return misbehaving_threads
@@ -179,6 +179,6 @@ if __name__ == '__main__':
     if args.single_ip:
         attacker.perform_attack_on_ip(args.single_ip)
     elif args.loop:
-	attacker.attack_loop()
+        attacker.attack_loop()
     else:
         attacker.__attack_loop_inner_function__({})
