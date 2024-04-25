@@ -289,7 +289,15 @@ class test_vulns():
     def test_ssh_trenton(self, ip):
         return self.test_ssh_default(ip, "trenton", "trenton")
 
+    def test_ssh_trenton(self, ip):
+        return self.test_ssh_default(ip, "darlene", "darlene")
 
+    def test_ssh_trenton(self, ip):
+        return self.test_ssh_default(ip, "leslie", "leslie")
+    
+    def test_ssh_trenton(self, ip):
+        return self.test_ssh_default(ip, "mobley", "mobley")
+    
 if __name__ == "__main__":
     ip_addr = "192.168.66.2"
     t = test_vulns()
